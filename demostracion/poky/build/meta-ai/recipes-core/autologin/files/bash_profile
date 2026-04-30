@@ -1,0 +1,19 @@
+#!/bin/bash
+# ================================================================
+#  /root/.bash_profile — Login shell de root
+#  Se ejecuta al hacer login: en consola física, tty2, o SSH
+#  con shell de login (ssh root@ip -t bash --login).
+# ================================================================
+
+# Cargar .bashrc si existe (aliases, PATH personalizados, etc.)
+[ -f ~/.bashrc ] && source ~/.bashrc
+
+# Iniciar X11 automáticamente SOLO si:
+#   1. No hay ya un servidor X corriendo ($DISPLAY vacío)
+#   2. El login ocurrió exactamente en tty1 (pantalla física principal)
+#
+# Esto evita intentar lanzar X si el login fue por SSH o en tty2/tty3.
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    echo "Iniciando interfaz gráfica X11..."
+    exec startx 2>/var/log/xsession-errors
+fi
