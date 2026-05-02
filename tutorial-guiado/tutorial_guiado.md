@@ -95,6 +95,9 @@ docker exec -it yocto-x86 /bin/bash
 Dentro del contenedor, clonar Poky y las capas adicionales necesarias. Poky es la distribución de referencia de Yocto: incluye BitBake (el motor de compilación) y todas las recetas base del sistema operativo.
 
 ```bash
+# Reclamar propiedad de carpeta de trabajo, si no se hace, no permite ejecutar los siguientes comandos
+sudo chown -R yoctouser:yoctouser /home/yoctouser/yocto-workspace
+
 # Poky: el núcleo de Yocto con BitBake y las recetas base
 git clone -b scarthgap git://git.yoctoproject.org/poky.git
 
@@ -117,6 +120,9 @@ source oe-init-build-env build
 ```bash
 # Recetas gráficas y de sistema: dependencias de varios paquetes
 bitbake-layers add-layer ../meta-openembedded/meta-oe
+
+# Dependencia del meta-networking
+bitbake-layers add-layer ../meta-openembedded/meta-python
 
 # Herramientas de red y cliente DHCP
 bitbake-layers add-layer ../meta-openembedded/meta-networking
@@ -144,8 +150,8 @@ wget https://github.com/ollama/ollama/releases/download/v0.5.7/ollama-linux-amd6
 # Instala Ollama en el host para poder descargar el modelo
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Descarga TinyLlama (~600 MB), el modelo más pequeño funcional disponible
-ollama pull tinyllama
+# Descarga gemma2:2b (~1.6 MB)
+ollama pull gemma2:2b
 
 # Verifica que el modelo se descargó
 ollama list
@@ -153,7 +159,7 @@ ollama list
 # Empaqueta los pesos del modelo con la estructura que Ollama espera:
 # el tar.gz contendrá models/blobs/ y models/manifests/
 # que luego se extraen en /root/.ollama/ dentro de la imagen
-sudo tar -czvf tinyllama-prebaked.tar.gz \
+sudo tar -czvf ~/Escritorio/gemma2-2b-prebaked.tar.gz \
     -C /usr/share/ollama/.ollama models
 ```
 
@@ -277,7 +283,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 SRC_URI = " \
     file://ollama-linux-amd64.tgz;subdir=ollama-release \
     file://ollama.service \
-    file://tinyllama-prebaked.tar.gz;unpack=0 \
+    file://gemma2-2b-prebaked.tar.gz;unpack=0 \
 "
 # subdir=ollama-release: extrae el tgz en su propia carpeta para no mezclar archivos
 # unpack=0 en el modelo: BitBake descomprime automáticamente los .tar.gz,
@@ -310,7 +316,7 @@ do_install() {
     # Extrae los pesos del modelo en /root/.ollama/
     # --no-same-owner: descarta el UID/GID original del tar para evitar errores de QA
     install -d ${D}/root/.ollama
-    tar --no-same-owner -xzf ${WORKDIR}/tinyllama-prebaked.tar.gz \
+    tar --no-same-owner -xzf ${WORKDIR}/gemma2-2b-prebaked.tar.gz \
         -C ${D}/root/.ollama/
 }
 

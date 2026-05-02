@@ -1,0 +1,26 @@
+[Unit]
+Description=Email Sales Agent — Asistente de ventas por correo
+# Arranca después de que la red esté operativa y Ollama esté corriendo
+# Así se garantiza que ambas dependencias están listas antes de procesar correos
+After=network-online.target ollama.service
+Wants=network-online.target
+Requires=ollama.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/bin/email-agent/agent.py
+User=root
+
+# HOME=/root es necesario para que Python encuentre caché y archivos del usuario
+Environment=HOME=/root
+
+# Si el script termina por cualquier error, systemd lo reinicia automáticamente
+Restart=on-failure
+RestartSec=30
+
+# Los logs también van a journald, además del archivo /var/log/email-agent.log
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
