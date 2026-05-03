@@ -1,8 +1,10 @@
 # Tutorial: Imagen Yocto con LLM en VirtualBox
 
-Este tutorial guía la creación de una imagen personalizada con Yocto Scarthgap orientada a arquitectura x86-64. La imagen incluye Ollama con el modelo TinyLlama preinstalado, y está pensada para correr dentro de VirtualBox. 
+Este tutorial guía la creación de una imagen personalizada con Yocto Scarthgap orientada a arquitectura x86-64. La imagen incluye Ollama con el modelo Gemma2, LLM de Google con 2B de parámetros, preinstalado, y está pensada para correr dentro de VirtualBox.
 
 **Tiempo estimado:** entre 3 y 5 horas (la mayor parte es compilación automática).
+
+**Nota:** Los archivos de los cuales se muestra el contenido a lo largo del tutorial, se encuentran en el repositorio, en caso de que se prefieran copiar y pegar desde ahí. Los modelos de Ollama no se adjuntan, dado su elevado peso.
 
 ---
 
@@ -291,6 +293,10 @@ SRC_URI = " \
 
 S = "${WORKDIR}"
 
+# patchelf-native permite reescribir el PT_INTERP del ELF del binario de Ollama
+# durante el build, antes de que entre a la imagen
+DEPENDS += "patchelf-native"
+
 # "inherit systemd" activa el soporte para instalar y habilitar servicios systemd
 inherit systemd
 
@@ -302,9 +308,20 @@ SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 do_install() {
     # Instala el binario de Ollama en /usr/bin/
-    # La inferencia por CPU está integrada directamente en este binario
     install -d ${D}${bindir}
     install -m 0755 ${WORKDIR}/ollama-release/bin/ollama ${D}${bindir}/ollama
+
+    # El binario precompilado de Ollama viene de Ubuntu y tiene hardcodeado
+    # /lib64/ld-linux-x86-64.so.2 como intérprete ELF (PT_INTERP).
+    # Yocto con usrmerge coloca el loader en /usr/lib/ld-linux-x86-64.so.2
+    # y no crea /lib64/, por lo que el kernel no puede arrancar el binario.
+    # patchelf reescribe el PT_INTERP para que apunte a la ruta correcta de Yocto.
+    patchelf --set-interpreter /usr/lib/ld-linux-x86-64.so.2 \
+        ${D}${bindir}/ollama
+
+    # Symlink /lib64 → /usr/lib como red de seguridad para cualquier otra
+    # librería dinámica que el binario busque bajo /lib64/ en tiempo de ejecución
+    ln -sf /usr/lib ${D}/lib64
 
     # lib/ollama/ no se instala: contiene solo runners CUDA/ROCm
     # que requieren libcuda.so o librocm, las cuales no existen en una VM sin GPU
@@ -325,11 +342,14 @@ FILES:${PN} += " \
     ${bindir}/ollama \
     ${systemd_system_unitdir}/ollama.service \
     /root/.ollama/ \
+    /lib64 \
 "
 
-# El binario viene precompilado y sin símbolos de debug
-# Sin esta línea, BitBake lanzaría un error de QA al detectarlo
-INSANE_SKIP:${PN} = "already-stripped"
+# El binario viene precompilado y sin símbolos de debug.
+# Sin esta línea, BitBake lanzaría un error de QA al detectarlo.
+# "arch" se agrega porque patchelf modifica el ELF y BitBake podría
+# quejarse de arquitectura no reconocida en el binario parcheado.
+INSANE_SKIP:${PN} = "already-stripped arch"
 ```
 
 ---
@@ -439,6 +459,14 @@ CONF_VERSION = "2"
 # Desactiva la generación de manifiestos SPDX (licencias)
 # Causan colisiones de sstate si se cambian DISTRO_FEATURES entre builds
 INHERIT:remove = "create-spdx"
+
+# Desactiva uninative para evitar el error:
+#   "patchelf: section header table out of bounds"
+# que ocurre cuando patchelf intenta parchear el intérprete ELF de binarios
+# nativos (como qemu-system-x86_64) que llegaron ya stripeados al sysroot.
+# Uninative no es necesario en un build dentro de Docker porque el entorno
+# ya es controlado y reproducible sin necesidad de reescribir el loader.
+INHERIT:remove = "uninative"
 ```
 
 ---
@@ -473,14 +501,7 @@ poky/build/tmp/deploy/images/genericx86-64/
 
 ## 10. Importar la imagen a VirtualBox
 
-La imagen generada es un disco en formato `.wic` (imagen de disco raw). VirtualBox trabaja con el formato `.vmdk`, así que hay que convertirla. Esta conversión se hace en el **host**, fuera del contenedor.
-
-Primero, copiar la imagen fuera del contenedor si está montada en el volumen compartido. Si no, copiarla manualmente:
-
-```bash
-# Desde el host, en la carpeta del proyecto
-cp ./yocto-workspace/poky/build/tmp/deploy/images/genericx86-64/core-image-base-genericx86-64.wic.vmdk .
-```
+La imagen generada es un disco en formato `.wic.vmdk`, formato que acepta VirtualBox.
 
 ---
 
@@ -493,16 +514,35 @@ Abrir VirtualBox y crear una nueva máquina virtual con estas configuraciones:
 - **Tipo:** Linux
 - **Versión:** Other Linux (64-bit)
 
+<a id="fig_10"></a>
+<figure style="text-align: center; margin: 20px auto;">
+  <img src="Imágenes/Captura desde 2026-05-02 17-35-55.png" alt="Placeholder"
+       style="width: 700px; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+  <figcaption style="font-style: italic; color: #666;"></figcaption>
+</figure>
+
 **Hardware:**
-- **RAM:** mínimo 4096 MB (4 GB). Con menos, TinyLlama puede fallar al cargar
+- **RAM:** mínimo 4096 MB (4 GB). Con menos, Gemma2:2b puede fallar al cargar
 - **CPUs:** 2 o más
+- **EFI**: Activado
+
+<a id="fig_10"></a>
+<figure style="text-align: center; margin: 20px auto;">
+  <img src="Imágenes/Captura desde 2026-05-02 17-37-23.png" alt="Placeholder"
+       style="width: 700px; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+  <figcaption style="font-style: italic; color: #666;"></figcaption>
+</figure>
 
 **Disco duro:**
 - Seleccionar **"Usar un archivo de disco duro existente"**
-- Navegar y seleccionar el archivo `core-image-base-genericx86-64.vmdk` generado en el paso anterior
+- Navegar y seleccionar el archivo `core-image-base-genericx86-64.wic.vmdk` generado en el paso anterior.
 
-**Red:**
-- Mantener el adaptador en modo **NAT** (configuración por defecto)
+<a id="fig_10"></a>
+<figure style="text-align: center; margin: 20px auto;">
+  <img src="Imágenes/Captura desde 2026-05-02 17-38-10.png" alt="Placeholder"
+       style="width: 700px; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+  <figcaption style="font-style: italic; color: #666;"></figcaption>
+</figure>
 
 Guardar y arrancar la máquina virtual.
 
@@ -531,17 +571,17 @@ Verificar que el modelo está disponible:
 
 ```bash
 ollama list
-# Debe mostrar: tinyllama con su ID y tamaño (~600 MB)
+# Debe mostrar: gemma2 con su ID y tamaño
 ```
 
 Probar el modelo:
 
 ```bash
 # Enviar un prompt directo y recibir una respuesta
-ollama run tinyllama "Explain what a neural network is in two sentences"
+ollama run gemma2:2b "Explain what a neural network is in two sentences"
 
 # Abrir un chat interactivo con el modelo
-ollama run tinyllama
+ollama run gemma2:2b
 # Para salir del chat: escribir /bye y Enter
 ```
 
@@ -560,26 +600,6 @@ VBoxManage --version
 ```
 
 Si no aparece, agregar la carpeta de VirtualBox al PATH o usar la ruta completa.
-
----
-
-### La VM no arranca (pantalla negra o error de bootloader)
-
-Significa que la conversión del `.wic` a `.vmdk` no se completó bien, o que el archivo `.wic` estaba corrupto. Verificar el tamaño del archivo generado:
-
-```bash
-ls -lh core-image-base-genericx86-64.wic
-# Debe pesar varios gigabytes, no cero ni unos pocos KB
-```
-
-Si el tamaño es correcto, intentar la conversión con `qemu-img` como alternativa a VBoxManage:
-
-```bash
-# Requiere tener qemu-utils instalado en el host
-qemu-img convert -f raw -O vmdk \
-    core-image-base-genericx86-64.wic \
-    core-image-base-genericx86-64.vmdk
-```
 
 ---
 
@@ -642,7 +662,34 @@ ip addr show eth0
 
 ---
 
-### El build falla con error de caché (sstate)
+### El build falla con `patchelf: section header table out of bounds`
+
+Este error ocurre en el task `do_populate_sysroot` de `qemu-system-native`. El binario `qemu-system-x86_64` llega ya stripeado al sysroot, y cuando `uninative` intenta usar `patchelf` para reescribir su intérprete ELF, falla porque la tabla de section headers está truncada.
+
+La solución está incluida en el `local.conf` de este tutorial (`INHERIT:remove = "uninative"`). Si el error ocurre de todas formas (por ejemplo, si el `local.conf` fue copiado de una versión anterior sin ese fix), hacer lo siguiente:
+
+1. Limpiar el estado corrupto de qemu:
+
+```bash
+# Dentro del contenedor, desde poky/build/
+bitbake -c cleansstate qemu-system-native
+```
+
+2. Verificar que `local.conf` tenga la línea:
+
+```bash
+INHERIT:remove = "uninative"
+```
+
+3. Volver a compilar:
+
+```bash
+bitbake core-image-base
+```
+
+---
+
+
 
 Si un build previo falló a mitad y el siguiente también falla con errores de "File exists" o conflictos de sstate, limpiar la caché de la receta problemática:
 

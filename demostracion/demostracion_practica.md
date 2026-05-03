@@ -93,6 +93,9 @@ docker exec -it yocto-ia-pi5 /bin/bash
 Ya dentro del contenedor, se clona Poky y las capas adicionales necesarias. Poky es la distribución de referencia de Yocto: incluye BitBake (el motor de compilación), las recetas base del sistema y las políticas de build. La rama `scarthgap` es la versión LTS usada en este proyecto.
 
 ```bash
+# Reclamar propiedad de carpeta de trabajo, si no se hace, no permite ejecutar los siguientes comandos
+sudo chown -R yoctouser:yoctouser /home/yoctouser/yocto-workspace
+
 # Poky: el núcleo de Yocto con BitBake, recetas base y toolchain
 git clone -b scarthgap git://git.yoctoproject.org/poky.git
 

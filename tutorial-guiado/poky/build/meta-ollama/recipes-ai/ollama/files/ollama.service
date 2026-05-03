@@ -1,0 +1,27 @@
+[Unit]
+Description=Ollama - Local LLM Runner
+# Arranca después de que el sistema esté listo
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/ollama serve
+User=root
+
+# Ollama busca los modelos en $HOME/.ollama/models
+# Un servicio systemd no hereda el HOME del usuario por defecto
+Environment=HOME=/root
+
+# Ruta explícita a los modelos, refuerza que no haya confusión de rutas
+Environment=OLLAMA_MODELS=/root/.ollama/models
+
+# Escucha en todas las interfaces; permite consultar la API desde el host
+Environment=OLLAMA_HOST=0.0.0.0:11434
+
+# Sin límite al detener: un modelo cargado puede tardar en terminar
+TimeoutStopSec=infinity
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
