@@ -1,35 +1,15 @@
 [Unit]
 Description=Ollama Service
-# Espera a que la red esté completamente operativa antes de arrancar.
-# Necesario porque ollama serve puede intentar registrar en servicios
-# externos al iniciar.
 After=network-online.target
 Wants=network-online.target
-
 [Service]
 ExecStart=/usr/bin/ollama serve
 User=root
-
-# HOME=/root es necesario porque ollama busca los modelos en
-# $HOME/.ollama/models. Si HOME no está definido o es incorrecto,
-# ollama no encuentra el modelo y el runner falla con error -1.
 Environment=HOME=/root
-
-# OLLAMA_MODELS sobreescribe la ruta de modelos explícitamente.
-# Doble seguro: aunque HOME esté mal, los modelos se encuentran.
 Environment=OLLAMA_MODELS=/root/.ollama/models
-
-# OLLAMA_HOST define en qué interfaz y puerto escucha la API.
-# 0.0.0.0 permite conexiones desde cualquier IP de la red local,
-# no solo desde localhost. Útil para consultar la API desde el PC.
 Environment=OLLAMA_HOST=0.0.0.0:11434
-
-# Sin límite de tiempo para detener el servicio, porque ollama puede
-# tardar en terminar si está procesando un prompt largo.
 TimeoutStopSec=infinity
-
 Restart=always
 RestartSec=5
-
 [Install]
 WantedBy=multi-user.target
