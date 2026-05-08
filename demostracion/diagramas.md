@@ -41,57 +41,90 @@ flowchart TD
 
 ## Diagrama 2 — Agente Python
 
+
 ```mermaid
 flowchart TD
-    A(["▶ Servicio arranca"]):::start
+    A(["Servicio arranca"]):::start
 
-    B["⏳ wait_for_ollama
-    Consulta /api/tags
-    hasta que Ollama responda"]:::init
+    B["Esperar a Ollama
+    Consulta cada 20 segundos
+    Máximo 5 minutos"]:::init
 
-    C["🔥 warmup_ollama
+    BFAIL(["Ollama no respondió
+    systemd reiniciará el agente"]):::error
+
+    C["Calentar el modelo
     Inferencia de prueba
-    carga el modelo en RAM"]:::init
+    para cargar el modelo en RAM"]:::init
 
-    subgraph LOOP["🔄 Bucle principal — cada 60 segundos"]
-        D1["📄 load_store_info
-        Lee inventario fresco
-        desde store_info.md"]:::file
+    subgraph LOOP["Bucle principal — se repite cada 60 segundos"]
+        D1["Leer inventario
+        Lee store_info.md
+        siempre fresco del disco"]:::file
 
-        D2["🔐 IMAP4_SSL login
-        imap.gmail.com:993
-        App Password"]:::net
+        D2["Conectar a Gmail
+        IMAP SSL puerto 993
+        Con App Password"]:::net
 
-        D3{"¿Correos
+        D2FAIL["Error de conexión
+        Se registra en el log
+        Se intenta en el próximo ciclo"]:::error
+
+        D3{"Hay correos
         no leídos?"}:::decision
 
-        D4["💤 sleep 60s"]:::sleep
+        D4["Sin correos
+        Cerrar conexión
+        Dormir 60 segundos"]:::sleep
 
-        D5["🤖 build_prompt + query_ollama
-        LLM genera respuesta
-        temperature=0.1"]:::llm
+        subgraph FOREACH["Por cada correo no leído"]
+            E1["Descargar correo
+            Obtiene el mensaje completo
+            con todos sus encabezados"]:::net
+            E2["Extraer datos
+            Remitente, asunto y cuerpo
+            del correo recibido"]:::proc
+            E3["Construir prompt
+            Combina el inventario
+            con el correo del cliente"]:::llm
+            E4["Consultar al LLM
+            Ollama genera la respuesta
+            Puede tardar hasta 10 minutos"]:::llm
+            E5["Enviar respuesta
+            Gmail SMTP puerto 465
+            Responde al remitente"]:::net
+            E6["Marcar como leído
+            Para no responderlo
+            de nuevo"]:::proc
+            E1 --> E2 --> E3 --> E4 --> E5 --> E6
+        end
 
-        D6["📤 send_reply SMTP 465
-        Marcar correo como leído
-        flag Seen"]:::net
-
-        D1 --> D2 --> D3
-        D3 -- "No" --> D4 --> D1
-        D3 -- "Sí" --> D5 --> D6 --> D4
+        D1 --> D2
+        D2 --> D2FAIL
+        D2 --> D3
+        D3 -- "No hay" --> D4
+        D3 -- "Sí hay" --> FOREACH
+        FOREACH --> D4
     end
 
-    CONFIG["⚙️ config.env
-    Credenciales · modelo
-    personalidad"]:::file
+    CONFIG["config.env
+    Credenciales de Gmail
+    Modelo y personalidad"]:::file
 
-    STORE["🏪 store_info.md
-    Inventario · precios
-    sucursal · horarios"]:::file
+    STORE["store_info.md
+    Inventario y precios
+    Sucursal y horarios"]:::file
 
-    A --> B --> C --> LOOP
+    A --> B
+    B -- "No responde" --> BFAIL
+    B -- "Listo" --> C
+    C --> LOOP
+
     CONFIG -.-> D2
-    CONFIG -.-> D5
-    STORE  -.-> D5
+    CONFIG -.-> E4
+    CONFIG -.-> E5
+    STORE  -.-> D1
+    D1     -.-> E4
 
     classDef start    fill:#534AB7,stroke:#3C3489,color:#EEEDFE
     classDef init     fill:#0F6E56,stroke:#085041,color:#E1F5EE
@@ -100,4 +133,6 @@ flowchart TD
     classDef file     fill:#BA7517,stroke:#854F0B,color:#FAEEDA
     classDef decision fill:#993C1D,stroke:#712B13,color:#FAECE7
     classDef sleep    fill:#5F5E5A,stroke:#444441,color:#F1EFE8
+    classDef proc     fill:#1A6B8A,stroke:#0E4D66,color:#E0F4FF
+    classDef error    fill:#7A1C1C,stroke:#5A1212,color:#FFE0E0
 ```

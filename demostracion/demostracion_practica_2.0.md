@@ -739,12 +739,6 @@ El agente es un script Python que corre como servicio. Su flujo es:
 6. Envía la respuesta al remitente via SMTP
 7. Marca el correo como leído
 
-El archivo está comentado en detalle en el código. Los parámetros más importantes son:
-
-- `temperature=0.1`: mínima creatividad para respuestas factuales. Reduce la tendencia del modelo a inventar productos o precios.
-- `num_predict=1200`: espacio suficiente para responder preguntas múltiples sin truncarse.
-- El cuerpo del correo se trunca a 600 caracteres para no desperdiciar tokens del contexto limitado del modelo.
-
 Ubicación: `meta-ai/recipes-ai/email-agent/files/agent.py`
 
 ---
