@@ -167,6 +167,8 @@ sudo tar -czvf ~/Escritorio/gemma2-2b-prebaked.tar.gz \
 
 Una vez generados, estos archivos se copian más adelante a la carpeta `files/` de la receta.
 
+**Nota importante:** Para que el comando `sudo tar -czvf ~/Escritorio/gemma2-2b-prebaked.tar.gz \ ....` funcione, dentro de la lista de LLMs disponibles en el ollama local solo debe estar `gemma2:2b`. En caso de que al correr `ollama list` hayan más LLMs, hay que eliminarlos uno por uno con `ollama rm nombre_LLM`. Cuando solo quede `gemma2:2b`, ya se puedo correr el comando que empaqueta dicho LLM en un `tar.gz`.
+
 ---
 
 ## 5. Estructura de la capa personalizada
