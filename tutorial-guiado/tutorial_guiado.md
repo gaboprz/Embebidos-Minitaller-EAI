@@ -141,7 +141,7 @@ bitbake-layers add-layer ../build/meta-ollama/
 
 Antes de armar la estructura de la capa, hay que descargar los archivos binarios que van dentro de la receta de Ollama. Estos pasos se hacen **en el host** (fuera del contenedor), en una terminal separada.
 
-El binario de Ollama para x86-64 se descarga de GitHub. El modelo TinyLlama se descarga usando Ollama directamente en el host y luego se empaqueta con la estructura de directorios que Ollama espera en producción.
+El binario de Ollama para x86-64 se descarga de GitHub. El modelo Gemma se descarga usando Ollama directamente en el host y luego se empaqueta con la estructura de directorios que Ollama espera en producción.
 
 ```bash
 # --- En el HOST, no dentro del contenedor ---
