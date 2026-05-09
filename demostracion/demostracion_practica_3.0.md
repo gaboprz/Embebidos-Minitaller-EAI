@@ -4,47 +4,6 @@ Se usa una Raspberry Pi 5 de 8 GB de RAM. Se crea una imagen personalizada usand
 
 ---
 
-## Arquitectura del sistema
-
-La Pi no tiene conexión directa a internet. Todo el tráfico hacia Gmail pasa a través del iPhone, que actúa como router mediante el hotspot de datos móviles. La laptop del presentador se conecta al mismo hotspot para acceder a la Pi por SSH.
-
-```mermaid
-flowchart TD
-    CLIENTE["📧 Cliente externo
-    cualquier dispositivo"]
-
-    GMAIL["☁️ Gmail
-    Servidor Google
-    IMAP · SMTP"]
-
-    IPHONE["📱 iPhone de Gabriel
-    Hotspot WiFi + datos móviles
-    Router de internet"]
-
-    PI["🔴 Raspberry Pi 5
-    Ollama + LLM gemma3:4b
-    email-agent.service"]
-
-    LAPTOP["💻 Laptop presentador
-    SSH 172.20.10.x"]
-
-    CLIENTE -- "1 · Envía correo (SMTP)" --> GMAIL
-    GMAIL -- "4 · Entrega respuesta" --> CLIENTE
-    PI -- "WiFi WPA2 · 172.20.10.x" --> IPHONE
-    IPHONE -- "2 · Lee correos (IMAP)
-    3 · Envía respuesta (SMTP)" --> GMAIL
-    LAPTOP -- "WiFi · misma red hotspot" --> IPHONE
-    IPHONE -- "SSH 172.20.10.x" --> PI
-
-    style CLIENTE fill:#E6F1FB,stroke:#185FA5,color:#0C447C
-    style GMAIL   fill:#EAF3DE,stroke:#3B6D11,color:#27500A
-    style IPHONE  fill:#E1F5EE,stroke:#0F6E56,color:#085041
-    style PI      fill:#EEEDFE,stroke:#534AB7,color:#3C3489
-    style LAPTOP  fill:#F1EFE8,stroke:#5F5E5A,color:#444441
-```
-
----
-
 ## Creación del contenedor Docker
 
 El setup está dividido en tres archivos que trabajan juntos:
