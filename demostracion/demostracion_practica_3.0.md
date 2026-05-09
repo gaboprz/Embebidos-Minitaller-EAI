@@ -213,7 +213,7 @@ Se usa `gemma3:4b` como modelo de lenguaje.
 # Instala Ollama en el host para poder descargar el modelo
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Descargar gemma3:4b (~2.6 GB)
+# Descargar gemma3:4b (~3.1 GB)
 ollama pull gemma3:4b
 ollama list   # verificar que aparece gemma3:4b
 
