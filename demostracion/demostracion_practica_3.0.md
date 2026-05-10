@@ -149,6 +149,29 @@ El script realiza siete pasos en orden:
 
 ---
 
+## Construcción y primer arranque
+
+```bash
+# Construye la imagen Docker — solo instala paquetes del sistema
+docker build -t yocto-builder-pi5 .
+
+# Crea la carpeta que se montará como volumen
+mkdir -p yocto-workspace
+
+# Primer arranque: entrypoint.sh detecta el volumen vacío y ejecuta
+# setup.sh automáticamente. Al terminar, todo es visible en yocto-workspace/
+# Monta un volumen — conecta una carpeta del host con una carpeta del contenedor.
+docker run -it --name yocto-ia-pi5 \
+  -v $(pwd)/yocto-workspace:/home/yoctouser/yocto-workspace \
+  yocto-builder-pi5
+
+# Para volver a entrar en sesiones posteriores
+docker start yocto-ia-pi5
+docker exec -it yocto-ia-pi5 /bin/bash
+```
+
+---
+
 ## Preparación de los archivos binarios
 
 Antes de compilar hay que preparar dos archivos en el **host** (fuera del contenedor). Son los únicos archivos que no se crean automáticamente porque son demasiado pesados.
@@ -180,29 +203,6 @@ ollama list   # verificar que aparece gemma3:4b
 # El tar.gz contendrá models/blobs/ y models/manifests/
 sudo tar -czvf gemma3-4b-prebaked.tar.gz \
     -C /usr/share/ollama/.ollama models
-```
-
----
-
-## Construcción y primer arranque
-
-```bash
-# Construye la imagen Docker — solo instala paquetes del sistema
-docker build -t yocto-builder-pi5 .
-
-# Crea la carpeta que se montará como volumen
-mkdir -p yocto-workspace
-
-# Primer arranque: entrypoint.sh detecta el volumen vacío y ejecuta
-# setup.sh automáticamente. Al terminar, todo es visible en yocto-workspace/
-# Monta un volumen — conecta una carpeta del host con una carpeta del contenedor.
-docker run -it --name yocto-ia-pi5 \
-  -v $(pwd)/yocto-workspace:/home/yoctouser/yocto-workspace \
-  yocto-builder-pi5
-
-# Para volver a entrar en sesiones posteriores
-docker start yocto-ia-pi5
-docker exec -it yocto-ia-pi5 /bin/bash
 ```
 
 ---
