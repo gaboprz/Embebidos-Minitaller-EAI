@@ -891,11 +891,15 @@ bitbake core-image-base
 
 ## Flasheo de la tarjeta SD
 
+Copiar y pegar la imagen resultante en el Escritorio del host. Luego de eso, descomprimir la imagen usando el siguiente comando.
+
 ```bash
 bzip2 -d -v core-image-base-raspberrypi5.rootfs-YYYYMMDDHHMMSS.wic.bz2
 ```
 
-Seleccionar el archivo `.wic` en balenaEtcher junto con la tarjeta SD.
+Ya con la imagen descomprimida, abrir balenaEtcher, seleccionar el archivo de la imagen y el objetivo en el que se va a flashear (probablemente una tarjeta SD) y dar en flashear.
+
+Luego de flasheada, se puede insertar en la Raspberry Pi 5 y al encenderla, va a bootear automáticamente en esta.
 
 ---
 
@@ -972,9 +976,9 @@ Sin correos nuevos.
 ## Uso del LLM directamente
 
 ```bash
-ollama list           # verificar que qwen3:4b está disponible
-ollama run qwen3:4b "¿Qué es un transistor?"
-ollama run qwen3:4b  # chat interactivo (salir con /bye)
+ollama list           # verificar que gemma3:4b está disponible
+ollama run gemma3:4b "¿Qué es un transistor?"
+ollama run gemma3:4b  # chat interactivo (salir con /bye)
 ```
 
 ---

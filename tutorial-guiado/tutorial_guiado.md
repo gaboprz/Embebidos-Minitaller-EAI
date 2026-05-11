@@ -186,7 +186,7 @@ meta-ollama/
         ├── files/
         │   ├── ollama-linux-amd64.tgz      ← descargado en el paso anterior
         │   ├── ollama.service              ← creado a continuación
-        │   └── tinyllama-prebaked.tar.gz   ← generado en el paso anterior
+        │   └── gemma2-2b-prebaked.tar.gz   ← generado en el paso anterior
         └── ollama_1.0.bb                   ← creado a continuación
 ```
 
@@ -496,7 +496,7 @@ Al terminar sin errores, la imagen aparece en:
 
 ```
 poky/build/tmp/deploy/images/genericx86-64/
-└── core-image-base-genericx86-64.wic
+└── core-image-base-genericx86-64.wic.vmdk
 ```
 
 ---
@@ -524,7 +524,7 @@ Abrir VirtualBox y crear una nueva máquina virtual con estas configuraciones:
 </figure>
 
 **Hardware:**
-- **RAM:** mínimo 4096 MB (4 GB). Con menos, Gemma2:2b puede fallar al cargar
+- **RAM:** mínimo 4096 MB (4 GB). Con menos, gemma2:2b puede fallar al cargar
 - **CPUs:** 2 o más
 - **EFI**: Activado
 
@@ -555,7 +555,7 @@ Guardar y arrancar la máquina virtual.
 Al arrancar la VM, aparece el prompt de login de la consola. Ingresar como root sin contraseña:
 
 ```
-raspberrypi5 login: root
+yocto-x86 login: root
 ```
 
 > El hostname puede ser diferente dependiendo de la configuración, pero el login es siempre `root`.
@@ -586,6 +586,12 @@ ollama run gemma2:2b "Explain what a neural network is in two sentences"
 ollama run gemma2:2b
 # Para salir del chat: escribir /bye y Enter
 ```
+
+---
+
+## Reto (Opcional)
+
+El reto consiste en lograr emular la Raspberry Pi 5 usando Qemu y dentro de esta emulación replicar el sistema mostrado en la demostración del minitaller.
 
 ---
 
@@ -639,7 +645,7 @@ Si está vacío, el paso de instalación del modelo dentro de la receta no se ej
 
 ```bash
 # Dentro de la VM, si hay conexión de red
-ollama pull tinyllama
+ollama pull gemma2:2b
 ```
 
 ---
@@ -660,50 +666,4 @@ systemctl start dhcpcd
 
 # Esperar unos segundos y volver a ver la IP
 ip addr show eth0
-```
-
----
-
-### El build falla con `patchelf: section header table out of bounds`
-
-Este error ocurre en el task `do_populate_sysroot` de `qemu-system-native`. El binario `qemu-system-x86_64` llega ya stripeado al sysroot, y cuando `uninative` intenta usar `patchelf` para reescribir su intérprete ELF, falla porque la tabla de section headers está truncada.
-
-La solución está incluida en el `local.conf` de este tutorial (`INHERIT:remove = "uninative"`). Si el error ocurre de todas formas (por ejemplo, si el `local.conf` fue copiado de una versión anterior sin ese fix), hacer lo siguiente:
-
-1. Limpiar el estado corrupto de qemu:
-
-```bash
-# Dentro del contenedor, desde poky/build/
-bitbake -c cleansstate qemu-system-native
-```
-
-2. Verificar que `local.conf` tenga la línea:
-
-```bash
-INHERIT:remove = "uninative"
-```
-
-3. Volver a compilar:
-
-```bash
-bitbake core-image-base
-```
-
----
-
-
-
-Si un build previo falló a mitad y el siguiente también falla con errores de "File exists" o conflictos de sstate, limpiar la caché de la receta problemática:
-
-```bash
-# Reemplazar "nombre-receta" por el paquete que falla (ej: ollama, core-image-base)
-bitbake -c cleansstate nombre-receta
-bitbake core-image-base
-```
-
-Si el problema persiste, limpiar el directorio de trabajo de la imagen completa:
-
-```bash
-rm -rf poky/build/tmp/work/genericx86-64-poky-linux/core-image-base/
-bitbake core-image-base
 ```
